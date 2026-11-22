@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>서울중앙지방법원_판결문__20XX고합XXXX</title>
+<style>
+  :root{
+    --page-w: 794px;            /* 문서 한 장 고정 너비 (A4) */
+    --page-h: 1123px;           /* 문서 한 장 고정 높이 */
+    --s: 1;                     /* 화면 폭 맞춤 배율 (JS 자동) */
+    --ink: #111;
+    --btn: 45px;
+    --top: 31px;                /* 상단 버튼 윗선 */
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:#f7f7f7;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    -webkit-user-select:none;user-select:none;
+  }
+  button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer;outline:none}
+  svg{display:block}
+
+  /* ───────────── 상/하단 블러 페이드 ───────────── */
+  .fade{position:fixed;left:0;right:0;z-index:18;pointer-events:none}
+  .fade.top{top:0;height:96px}
+  .fade.bottom{bottom:0;height:84px;display:none}
+  .fade::before{
+    content:"";position:absolute;inset:0;
+    -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);
+    background:linear-gradient(to bottom,rgba(253,253,253,.96),rgba(253,253,253,.9) 65%,rgba(253,253,253,0));
+    -webkit-mask-image:linear-gradient(to bottom,#000 70%,transparent);
+            mask-image:linear-gradient(to bottom,#000 70%,transparent);
+  }
+  .fade.bottom::before{
+    background:linear-gradient(to top,rgba(252,252,252,.86),rgba(252,252,252,.5) 60%,rgba(252,252,252,0));
+    -webkit-mask-image:linear-gradient(to top,#000 55%,transparent);
+            mask-image:linear-gradient(to top,#000 55%,transparent);
+  }
+
+  /* ───────────── 리퀴드 글래스 (굴절 + 블러 + 테두리 + 그림자) ───────────── */
+  .glass{
+    position:relative;
+    background:rgba(236,236,236,.58);
+    -webkit-backdrop-filter:blur(5px) saturate(1.6);
+    backdrop-filter:blur(5px) saturate(1.6);
+    box-shadow:
+      0 6px 36px rgba(0,0,0,.24),              /* 넓게 퍼지는 그림자 */
+      0 0 16px rgba(0,0,0,.06),                /* 사방으로 번지는 약한 그림자 */
+      inset 0 0 0 .75px rgba(0,0,0,.17),       /* 회색 테두리 */
+      inset 0 1.5px 1px rgba(255,255,255,.95), /* 위쪽 빛 반사 */
+      inset 0 -1px 1px rgba(255,255,255,.6);
+    transition:transform .14s cubic-bezier(.3,.7,.4,1.4),background .14s;
+  }
+  .glass:active{transform:scale(.94);background:rgba(220,220,222,.7)}
+  
+
+  /* ───────────── 상단 툴바 ───────────── */
+  .topbar{
+    position:fixed;left:0;right:0;top:calc(var(--top) + env(safe-area-inset-top));z-index:20;
+    height:var(--btn);padding:0 9.5px;
+    display:flex;align-items:center;gap:11.5px;
+    pointer-events:none;
+  }
+  .topbar > *{pointer-events:auto}
+  .circle{width:var(--btn);height:var(--btn);border-radius:50%;display:grid;place-items:center;flex:none}
+  .ic svg,.circle svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+
+  /* 알약형 버튼 묶음 (PC) — 아이콘은 사진 좌표에 고정 */
+  .pill{height:var(--btn);border-radius:var(--btn);flex:none;position:relative}
+  .pill.pen{width:116px}
+  .pill.ss{width:103px}
+  .pill .ic{position:absolute;top:0;width:44px;height:var(--btn);margin-left:-22px;display:grid;place-items:center;border-radius:50%}
+  .pill .ic:active{background:rgba(120,120,128,.2)}
+  .pill.pen .a{left:31.5px} .pill.pen .b{left:92px}
+  #btn-keyboard-pen svg{transform:translateY(1px)}
+  #btn-share-top svg{transform:translateY(-1px)}
+  .pill.ss  .a{left:24px} .pill.ss  .b{left:79px}
+
+  #btn-close svg{width:26px;height:26px}
+  .pill.ss .a svg{width:27px;height:27px}
+  .pill.ss .b svg{width:24px;height:24px}
+  #btn-list svg{width:22px;height:20px}
+
+  .title-wrap{
+    display:flex;align-items:center;gap:10px;min-width:0;flex:0 1 auto;
+    height:var(--btn);border-radius:22px;transition:opacity .12s;
+  }
+  .title-wrap:active{opacity:.5}
+  .title{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.15px;color:#111}
+  .chev{width:17px;height:17px;border-radius:50%;flex:none;background:#e5e5e7;display:grid;place-items:center;color:#78787e}
+  .chev svg{width:11px;height:11px;stroke-width:3}
+  body.menu-open .title-wrap{visibility:hidden}
+  .spacer{flex:1 1 0;min-width:0}
+
+  /* ───────────── 페이지 표시 (n/6) ───────────── */
+  .pageind{
+    position:fixed;z-index:19;left:19.5px;top:calc(102.5px + env(safe-area-inset-top));
+    height:35px;border-radius:18px;padding:0 20px;
+    display:flex;align-items:center;gap:5px;
+    font-size:14px;font-weight:400;color:#c4c4c8;
+    pointer-events:none;
+    transition:background .2s,color .2s,box-shadow .2s,font-weight .2s;
+  }
+  .pageind svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .pageind.active{
+    color:#1c1c1e;font-weight:600;
+    background:rgba(255,255,255,.55);
+    -webkit-backdrop-filter:blur(8px) saturate(1.6);backdrop-filter:blur(8px) saturate(1.6);
+    box-shadow:0 4px 14px rgba(0,0,0,.07),inset 0 0 0 .75px rgba(0,0,0,.15),inset 0 1px 1px rgba(255,255,255,.9);
+  }
+
+  /* ───────────── 문서 영역 ───────────── */
+  .viewer{padding:calc(90px + env(safe-area-inset-top)) 0 calc(60px + env(safe-area-inset-bottom))}
+  .sheet{
+    position:relative;overflow:hidden;background:#fff;
+    width:calc(var(--page-w) * var(--s));
+    height:calc(var(--page-h) * var(--s));
+    margin:0 auto 6px;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.05),0 0 8px rgba(0,0,0,.07);
+  }
+  .page{
+    position:absolute;left:0;top:0;
+    width:var(--page-w);height:var(--page-h);
+    transform:scale(var(--s));transform-origin:0 0;
+    padding:88px 79px 0;
+    font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    font-size:17px;letter-spacing:0;color:#111;
+    -webkit-user-select:text;user-select:text;
+  }
+
+  /* 문서 본문: 한 줄 = <p> 하나. 자동 줄바꿈 없음(white-space:pre) */
+  .doc{height:935px;overflow:hidden;outline:none;caret-color:#111}
+  .doc p,.ln{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:40px;min-height:40px}
+  .doc .big{font-size:20px;margin-top:72px}.doc .ttl{font-size:24px;margin:20px 0 16px}.doc .spaced{letter-spacing:.5em}
+  .doc .ind{text-indent:1em}.doc .lv1{padding-left:6px}.doc .lv2{padding-left:20px}.doc .jd0{margin-top:30px}.doc .jd{padding-left:300px}
+  .doc .hd{margin-left:auto;margin-right:auto;white-space:normal;text-align:justify;text-align-last:justify}
+  .doc .row{display:flex}.doc .lb{flex:none;width:88px;margin-right:69px;text-align:justify;text-align-last:justify}
+  .doc .lb+span{flex:1;min-width:0}
+  .doc .indent{padding-left:14px}
+  .doc .center{text-align:center}
+  .doc .gothic,.doc h1,.doc h2,.doc h3{font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-weight:700}
+  .doc h1,.doc h2,.doc h3{margin:6px 0 0;white-space:pre-wrap;line-height:40px;font-size:17px}
+
+  /* 쪽번호 "- 1 -" (필요 없으면 이 블록 삭제) */
+  .page::after{
+    content:"- " attr(data-no) " -";
+    position:absolute;left:0;right:0;bottom:62px;text-align:center;font-size:11px;
+  }
+
+  /* ───────────── 하단 툴바 (모바일 전용: 공유 버튼만) ───────────── */
+  .bottombar{
+    display:none;position:fixed;right:10px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:20;
+  }
+
+  /* ───────────── 파일 메뉴 팝업 ───────────── */
+  .menu{
+    position:fixed;z-index:30;
+    left:66.5px;top:calc(42.5px + env(safe-area-inset-top));
+    width:225px;height:265.5px;border-radius:24px;
+    background:rgba(250,250,250,.80);
+    -webkit-backdrop-filter:blur(16px) saturate(1.8);backdrop-filter:blur(16px) saturate(1.8);
+    box-shadow:
+      0 10px 34px rgba(0,0,0,.13),
+      0 2px 6px rgba(0,0,0,.05),
+      inset 0 0 0 .75px rgba(0,0,0,.22),
+      inset 0 1.5px 1px rgba(255,255,255,.95);
+    transform-origin:top left;
+    animation:pop .2s cubic-bezier(.3,.8,.4,1.15);
+  }
+  .menu[hidden]{display:none}
+  @keyframes pop{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+
+  .file{position:absolute;left:15.5px;right:16px;top:17px;height:40px}
+  .thumb{
+    position:absolute;left:0;top:0;width:28px;height:39.5px;border-radius:2.5px;background:#fff;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.14),0 1px 3px rgba(0,0,0,.1);
+    background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2028%20100%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20x%3D%229%22%20y%3D%226%22%20width%3D%2210%22%20height%3D%221.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%2210.5%22%20y%3D%2210%22%20width%3D%227%22%20height%3D%221%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2213.5%22%20width%3D%224%22%20height%3D%221.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2219%22%20width%3D%223%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2219%22%20width%3D%229%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2221%22%20width%3D%223%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2221%22%20width%3D%2210%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2223%22%20width%3D%223%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2223%22%20width%3D%2211%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2225%22%20width%3D%223%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2225%22%20width%3D%229%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2227%22%20width%3D%223%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2227%22%20width%3D%2210%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2229%22%20width%3D%223%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2229%22%20width%3D%2211%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2231%22%20width%3D%223%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2231%22%20width%3D%229%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%2210.5%22%20y%3D%2235%22%20width%3D%227%22%20height%3D%221.2%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2238%22%20width%3D%2221%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2240%22%20width%3D%229%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2244%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2246%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2248%22%20width%3D%2213%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2250%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2252%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2254%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2256%22%20width%3D%2213%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2258%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2260%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2262%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2264%22%20width%3D%2213%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2266%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2268%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2270%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%2210.5%22%20y%3D%2273%22%20width%3D%227%22%20height%3D%221.2%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2277%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2279%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2281%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2283%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2285%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2287%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2289%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2291%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2293%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2295%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2297%22%20width%3D%2222%22%20height%3D%220.8%22%20fill%3D%22%238a8a8a%22%2F%3E%3C%2Fsvg%3E");
+    background-size:100% 100%;background-repeat:no-repeat;
+  }
+  .file .name{position:absolute;left:36px;right:46px;top:2px;font-weight:600;font-size:10.6px;line-height:16px;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .file .sub{position:absolute;left:36px;right:46px;top:19.5px;font-size:11.6px;line-height:16px;color:#8e8e93;white-space:nowrap}
+  .file .share{position:absolute;right:0;top:4.5px;width:31px;height:31px;border-radius:50%;background:#e5e5e7;display:grid;place-items:center;transition:background .12s}
+  .file .share:active{background:#d2d2d6}
+  .file .share svg{width:14px;height:14px;stroke:#111;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+  .menu .item{
+    position:absolute;left:8px;right:8px;height:29.5px;border-radius:10px;
+    display:flex;align-items:center;padding:0 0 0 12px;
+    font-size:11px;color:#111;text-align:left;transition:background .1s;
+  }
+  .menu .item:active{background:rgba(120,120,128,.18)}
+  .menu .item svg{width:16px;height:16px;stroke:#111;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none;margin-right:11px}
+  .menu .i1{top:80.75px}
+  .menu .i2{top:126.75px}
+  .menu .i3{top:156.25px}
+  .menu .i4{top:185.75px}
+  .menu .i5{top:232.25px}
+  .menu hr{position:absolute;left:19.5px;right:20px;margin:0;border:0;border-top:1px solid #dcdcdf}
+  .menu .h1{top:119px}
+  .menu .h2{top:224px}
+
+  /* ───────────── 모바일 (3·4번 사진) ───────────── */
+  @media (max-width:760px){
+    .topbar{padding:0 9.5px;gap:11.5px}
+    .topbar .desktop-only{display:none}
+    .fade.bottom{display:block}
+    .bottombar{display:block}
+    .menu{left:115px}
+    .spacer{display:none}
+    .title-wrap{margin-right:1.5px}
+  }
+</style>
+</head>
+<body>
+
+<div class="fade top"></div>
+<div class="fade bottom"></div>
+
+<!-- ============ 상단 툴바 ============ -->
+<header class="topbar">
+
+  <!-- 목차 -->
+  <button class="circle glass list" id="btn-list" aria-label="목차" onclick="onList()">
+    <svg viewBox="0 0 24 24" preserveAspectRatio="none"><circle cx="3.600" cy="6" r=".8" fill="currentColor"/><circle cx="3.600" cy="12" r=".8" fill="currentColor"/><circle cx="3.600" cy="18" r=".8" fill="currentColor"/><path d="M8.500 6H21M8.500 12H21M8.500 18H21"/></svg>
+  </button>
+
+  <!-- 파일 제목 (누르면 파일 메뉴) -->
+  <button class="title-wrap" id="btn-title" aria-haspopup="true" aria-expanded="false" onclick="toggleMenu(event)">
+    <span class="title">서울중앙지방법원_판결문__20XX고합XXXX</span>
+    <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5.500 9l6.500 6.500L18.500 9"/></svg></span>
+  </button>
+
+  <span class="spacer"></span>
+
+  <!-- 입력 / 마크업 (PC 전용) -->
+  <div class="pill glass pen desktop-only">
+    <button class="ic a" id="btn-keyboard-pen" aria-label="입력" onclick="onKeyboardPen()">
+      <svg viewBox="0 0 34 24" style="width:38px;height:27px"><rect x="1.500" y="9" width="21" height="11" rx="2.800"/><path d="M5.500 13.200h.1M9 13.200h.1M12.500 13.200h.1M16 13.200h.1M5.500 16.600h13"/><path d="M30.500 3l-9 9-1.300 4.300 4.300-1.300 9-9a2 2 0 0 0-3-3z" transform="translate(-3 0) scale(.95)"/></svg>
+    </button>
+    <button class="ic b" id="btn-markup" aria-label="마크업" onclick="onMarkup()">
+      <svg viewBox="0 0 24 24" style="width:23px;height:23px"><circle cx="12" cy="12" r="10.500"/><path d="M7.800 17.200L12 6.500l4.200 10.700M9.400 14h5.200"/></svg>
+    </button>
+  </div>
+
+  <!-- 검색 / 공유 (PC 전용) -->
+  <div class="pill glass ss desktop-only">
+    <button class="ic a" id="btn-search" aria-label="검색" onclick="onSearch()">
+      <svg viewBox="0 0 24 24"><circle cx="10.500" cy="10.500" r="6.800"/><path d="M15.600 15.600L21 21"/></svg>
+    </button>
+    <button class="ic b" id="btn-share-top" aria-label="공유" onclick="onShare()">
+      <svg viewBox="0 0 24 24"><path d="M8.500 9.500H7A2 2 0 0 0 5 11.500v7.500A2 2 0 0 0 7 21h10a2 2 0 0 0 2-2v-7.500a2 2 0 0 0-2-2h-1.500"/><path d="M12 14.500V3M8.300 6.500L12 2.800l3.700 3.700"/></svg>
+    </button>
+  </div>
+
+  <!-- 닫기 -->
+  <button class="circle glass" id="btn-close" aria-label="닫기" onclick="onClose()">
+    <svg viewBox="0 0 24 24" style="stroke-width:2"><path d="M5 5l14 14M19 5L5 19"/></svg>
+  </button>
+</header>
+
+<!-- ============ 페이지 표시 ============ -->
+<div class="pageind" id="pageind" aria-live="polite">
+  <svg viewBox="0 0 24 24"><rect x="2.500" y="4.500" width="19" height="15" rx="3.500"/><path d="M9.500 4.500v15M5.200 9h1.500M5.200 12h1.500M5.200 15h1.500"/></svg>
+  <span id="pageind-text">1/6</span>
+</div>
+
+<!-- ============ 문서 영역 ============ -->
+<!--
+  [문서 채우는 법]
+  각 <div class="doc"> 안에 한 줄당 <p> 하나씩 넣으세요.
+  줄바꿈 위치는 PC/모바일 모두 고정입니다 (white-space:pre + 고정 크기 페이지를 통째로 축소/확대).
+
+  예)
+  <p class="center gothic">서 울 중 앙 지 방 법 원</p>
+  <p class="indent">피고인은 서울 소재 우신병원 외상외과 전임의로 근무하는 자로서 위 병원 외상외과 병동에 입원</p>
+  <p>중인 환자의 진료 및 퇴원 여부 결정 등 환자 관리 업무를 담당하였다.</p>
+  <h2>1. 이 사건 공소사실의 요지</h2>
+-->
+<main class="viewer" id="viewer">
+  <section class="sheet"><div class="page" data-no="1"><div class="doc" contenteditable="true" spellcheck="false">
+<p class="hd gothic big" style="width:398px">서 울 중 앙 지 방 법 원</p>
+<p class="hd gothic ttl" style="width:147px">판 결</p>
+<p class="row"><span class="lb">사　　건</span><span>20XX고합XXXX 업무상과실치사</span></p>
+<p class="row"><span class="lb">피 고 인</span><span>서이안 (XX0514-2XXXXXX), 의사</span></p>
+<p class="row"><span class="lb">주　　거</span><span>서울 강남구 일원동 XXX</span></p>
+<p class="row"><span class="lb">등록기준지</span><span>서울 종로구 청운동 XXX</span></p>
+<p class="row"><span class="lb">검　　사</span><span>김OO(기소), 박OO(공판)</span></p>
+<p class="row"><span class="lb">변 호 인</span><span>차주한 법률사무소</span></p>
+<p class="row"><span class="lb"></span><span>담당변호사 차주한, 강민재</span></p>
+<p class="row"><span class="lb">판결선고</span><span>20XX. 11. 22.</span></p>
+<h2 class="hd gothic" style="width:90px;margin-top:77px">주 문</h2>
+<p>피고인은 무죄.</p>
+<p>이 판결의 요지를 공시한다.</p>
+<h2 class="hd gothic" style="width:90px;margin-top:60px">이 유</h2>
+<h2>1. 이 사건 공소사실의 요지</h2>
+<p class="ind">피고인은 서울 소재 우신병원 외상외과 전임의로 근무하는 자로서 위 병원 외상외과 병동에 입원 중인 환자의 진료 및 퇴원 여부 결정 등 환자 관리 업무를 담당하였다.</p>
+<p class="ind">피고인은 20XX. 5. 14. 10:30경 위 우신병원 외상외과 병동에서 외상성 장간막 파열 봉합술을 받고 입원 치료 중이던 피해자 이○○(남, 54세)에 대하여 퇴원 결정을 함에 있어 당시 피해자에게 복강 내 지연성 출혈 및 그에 따른 패혈증 초기 징후를 의심할 만한 활력징후의 이상과 혈액검사 수치의 악화가 관찰되었으므로, 의사인 피고인으로서는 복부 전산화단층촬영 등 추가 정밀검사 및 경과 관찰을 통하여 출혈 및 감염 여부를 확인하고 적절한 응급 처치를 시행함으로써 피해자의 사망을 방지하여야 할 업무상 주의의무가 있었다.</p>
+<p class="ind">그럼에도 불구하고 피고인은 이를 게을리한 채 위와 같은 이상 소견을 간과하고 만연히 정상 범위 내로 오인하여 피해자에 대하여 퇴원 조치를 취한 업무상 과실로 같은 날 18:20경 피해자로 하여금 자택에서 복강 내 대량 출혈로 인한 출혈성 쇼크 및 패혈성 쇼크로 사망에 이르게 하였다.</p>
+<h2>2. 피고인 및 변호인의 주장</h2>
+<p class="ind">피고인 및 변호인은 피고인이 20XX. 5. 14. 10:30경 피해자에 대한 퇴원을 결정할 당시 피해자의 활력징후와 혈액검사 수치 및 복부 이학적 검사 소견은 모두 표준임상진료지침상 퇴원 기준에 부합하는 정상 범위 내에 있었고, 피해자의 사망은 퇴원 직전 원내 다른 병동에서 발생한 의료사고를 은폐하기 위하여 성명불상의 병원 관계자들이 응급 혈액 제제 및 의약품을 전용하고 사후에 전자의무기록과 폐쇄회로 텔레비전 영상을 조직적으로 위·변조한 데 기인한 것일 뿐 피고인에게는 공소사실 기재와 같은 업무상 주의의무 위반이나 그로 인한 인과관계가 존재하지 아니한다고 주장한다.</p>
+<h2>3. 판단</h2>
+<h3 class="lv1">가. 관련 법리</h3>
+<p class="ind">의료사고에 있어서 의사의 과실을 인정하기 위해서는 의사가 결과 발생을 예견할 수 있었음에도 불구하고 그 결과 발생을 예견하지 못하였고 그 결과 발생을 회피할 수 있었음에도 불구하고 그 결과 발생을 회피하지 못한 과실이 검토되어야 하며, 그 과실의 유무를 판단함에는 같은 업무와 직무에 종사하는 일반적 보통인의 주의정도를 표준으로 하여야 하고 이에는 사고 당시의 일반적인 의학의 수준과 의료환경 및 조건과 의료행위의 특수성 등이 고려되어야 한다(대법원 2006. 10. 26. 선고 2004도486 판결 등 참조).</p>
+<p class="ind">또한 형사재판에서 범죄사실의 인정은 법관으로 하여금 합리적인 의심을 할 여지가 없을 정도의 확신을 가지게 하는 증명력을 가진 엄격한 증거에 의하여야 하고 검사의 입증이 위와 같은 확신을 가지게 하는 정도에 충분히 이르지 못한 경우에는 설령 피고인에게 유죄의 의심이 간다고 하더라도 피고인의 이익으로 판단할 수밖에 없다(대법원 2001. 8. 21. 선고 2001도2823 판결 등 참조).</p>
+<h3 class="lv1">나. 인정사실</h3>
+<p class="ind">이 법원이 적법하게 채택하여 조사한 증거들과 당원의 서울중앙지방법원 20XX카기XXXX호 증거보전 및 검증결과, 감정인 최○○의 디지털 포렌식 감정결과, 기상청 관측자료, 위 우신병원 출입통제시스템 접속기록, 간호기록지 원본, 물품불출대장 및 증인들의 각 법정진술을 종합하면 다음 각 사실이 인정된다.</p>
+<p class="lv1">(1) 피해자의 입원 및 수술 후 경과</p>
+<p class="lv2">(가) 피해자 이○○은 20XX. 5. 10. 14:15경 교통사고로 인한 복부 둔상을 입고 위 우신병원 응급의료센터로 내원하여 외상성 장간막 파열 진단을 받았고 같은 날 17:40경부터 20:10경까지 피고인의 집도하에 응급 개복술 및 장간막 파열 봉합술을 시행받았다.</p>
+<p class="lv2">(나) 피해자는 수술 직후 외과계 중환자실에 입실하여 집중 치료를 받다가 활력징후가 안정됨에 따라 20XX. 5. 12. 11:00경 외상외과 일반병동으로 전실되었고 이후 20XX. 5. 14. 09:30경까지 실시된 활력징후 측정 및 말초혈액검사와 동맥혈가스분석 결과상 혈압 118/76mmHg, 맥박 74회/분, 호흡수 18회/분, 체온 36.7℃, 혈색소 12.8g/dL, 백혈구 7,400/㎕로서 외과적 합병증이나 복강 내 지연성 출혈을 시사할 만한 특이 이상 소견이 기재되어 있지 아니하였다.</p>
+<p class="lv1">(2) 검사가 제출한 전자의무기록 출력물의 기재 내용</p>
+<p class="lv2">(가) 검사는 공소사실에 부합하는 핵심 증거로서 위 우신병원이 수사기관에 임의제출한 전자의무기록 출력물 사본을 제출하였는바 위 출력물에는 20XX. 5. 14. 10:15경 피고인의 사용자 계정으로 시스템에 접속하여 피해자의 활력징후가 혈압 80/50mmHg, 맥박 124회/분, 체온 38.9℃로 급격히 악화되었고 복부 압통 및 반발통 소견이 관찰되었다는 내용의 경과기록을 입력·수정한 이력이 기재되어 있다.</p>
+<p class="lv2">(나) 검사는 위 출력물의 기재 내용을 근거로 피고인이 20XX. 5. 14. 10:15경 피해자의 상태 악화를 직접 확인하여 차트에 입력하고도 불과 15분 뒤인 같은 날 10:30경 만연히 퇴원 결정을 내렸다고 주장한다.</p>
+<p class="lv1">(3) 전산실 서버 감사 추적 로그에 대한 포렌식 감정결과</p>
+<p class="ind">변호인의 증거보전신청에 의하여 이 법원 집행관이 위 우신병원 전산실 메인 서버로부터 직접 압수·복제한 의료법 제23조 제4항 소정의 접속기록 및 데이터베이스 트랜잭션 로그에 대한 감정인 최○○의 디지털 포렌식 감정결과에 의하면 다음과 같은 사실이 확인된다.</p>
+<p class="lv2">(가) 위 20XX. 5. 14. 10:15:12경 생성된 수정 로그는 피고인이 근무하던 외상외과 병동 간호사실이나 의국 단말기가 아니라 전산실 내부 백본망에 직접 연결된 관리자 권한 단말기(IP 10.24.XX.XXX)를 통하여 생성되었다.</p>
+<p class="lv2">(나) 위 우신병원 출입통제시스템 기록상 피고인의 개인 사원증은 20XX. 5. 14. 10:11:04경 본관 1층 응급의료센터 격리구역 출입단말기에 태그되어 입실 처리되었고 같은 날 10:21:48경 위 격리구역에서 퇴실 태그될 때까지 약 10분간 응급의료센터 내에 체류하면서 다른 중증 외상환자의 응급 처치를 시행하고 있었으므로 물리적으로 전산실 단말기에 접근하여 해당 기록을 입력하는 것이 불가능하였다.</p>
+<p class="lv2">(다) 해당 의무기록의 세션 열람 시각과 최종 전자서명 저장 시각 사이의 소요 시간은 0.02초에 불과하여 통상적인 임상의사가 차트를 열람한 후 키보드를 통하여 임상 소견과 수치를 수기 입력하는 물리적·시간적 경과와는 현저히 배치되며 외부에서 사전에 작성된 문자열을 데이터베이스 쿼리 실행 또는 일괄 덮어쓰기 방식으로 강제 삽입한 트랜잭션 특성과 일치한다.</p>
+<p class="lv2">(라) 나아가 위 수정된 의무기록의 텍스트 구조를 피고인이 같은 기간 작성한 다른 환자 의무기록 142건과 대조한 결과 피고인이 일관되게 사용하는 영문 표준 의학약어 체계와 달리 1980~90년대 임상 현장에서 통용되던 구식 한자어 유래 약어 및 비표준 상용구 문형이 혼재되어 있어 작성자의 동일성을 인정하기 어렵다.</p>
+<p class="lv1">(4) 외래 병동 복도 폐쇄회로 텔레비전 영상의 모순점</p>
+<p class="lv2">(가) 검사가 제출한 20XX. 5. 14. 10:25경 위 우신병원 외래 병동 복도 폐쇄회로 텔레비전 영상 파일에는 복도 외측 유리창을 통하여 맑은 날의 직사광선이 유입되고 피해자의 우측 손목에 백색 환자 인식밴드가 착용된 채 보행하는 장면이 현출되어 있다.</p>
+<p class="lv2">(나) 그러나 기상청 서울관측소 공식 기상자료에 의하면 20XX. 5. 14. 09:00경부터 12:00경까지 서울 강남구 일원동 일대에는 시간당 42.5mm의 집중 호우가 관측되어 짙은 구름으로 인해 일사량이 거의 없었으며 위 병원 시설관리시스템 로그상 우천 시 조도 센서에 연동되어 외측 자동 차양 블라인드가 전면 하강 작동한 상태였다.</p>
+<p class="lv2">(다) 또한 간호기록지 원본 및 중앙공급실 물품불출대장상 피해자는 같은 날 08:00경 수술 후 어지럼증을 호소하여 낙상 고위험군으로 분류되었고 담당 간호사에 의해 기존 백색 인식밴드가 제거된 뒤 황색 인식밴드로 교체 착용된 사실이 인정되는바 위 영상에 나타난 피해자의 모습은 사고 당일 촬영된 것이 아니라 피해자가 입원 초기 또는 다른 일자에 촬영된 영상을 편집·삽입한 것으로 보인다.</p>
+<p class="lv1">(5) 원내 혈액 제제 불출 및 다른 병동 진료 경과</p>
+<p class="ind">수사기관 및 당원의 각 사실조회결과에 의하면 피해자의 퇴원 무렵 위 우신병원 혈액은행 및 응급약국에서 전산상 정규 처방 내역과 불일치하는 농축적혈구 및 승압제의 긴급 불출 기록이 존재하고 같은 시간대 위 병원의 다른 병동에서 발생한 중증 응급상황과 관련하여 당직의 및 진료부 소속 고위직 의료진 사이에 비정상적인 연락 내역이 확인되는 등 이 사건 진료기록 및 영상자료의 사후 개변 동기를 뒷받침하는 정황이 다수 드러났다.</p>
+<h3 class="lv1">다. 구체적 판단</h3>
+<p class="ind">위 인정사실을 앞서 본 관련 법리에 비추어 살펴본다.</p>
+<p class="ind">형사소송에 있어서 공소사실에 대한 거증책임은 검사에게 있고 유죄의 인정은 법관으로 하여금 합리적인 의심을 할 여지가 없을 정도의 확신을 가지게 하는 증명력을 가진 엄격한 증거에 의하여야 한다. 만약 검사가 제출한 핵심 증거의 진정성립이나 무결성에 합리적인 의심이 제기되어 그 증명력을 인정할 수 없게 된 경우 설령 피고인에게 유죄의 의심이 간다고 하더라도 피고인의 이익으로 판단하여야 한다.</p>
+<p class="ind">살피건대 검사가 피고인의 업무상 주의의무 위반을 입증하기 위하여 제출한 핵심 증거인 전자의무기록 출력물 및 외래 병동 복도 폐쇄회로 텔레비전 영상은 다음과 같은 사정들에 비추어 사후에 성명불상자에 의하여 인위적으로 위·변조 내지 편집되었을 합리적 의심을 배제하기 어려우므로 이를 유죄 인정의 증거로 삼을 수 없다.</p>
+<p class="lv2">① 문제의 20XX. 5. 14. 10:15경 의무기록 수정 로그는 피고인의 사원증 출입기록상 피고인이 응급의료센터 격리구역 내에 체류하고 있던 시각에 전산실 내부 관리자 단말기를 통하여 생성되었으므로 피고인 본인이 자신의 계정으로 접속하여 입력하였다고 볼 수 없다.</p>
+<p class="lv2">② 해당 기록의 열람과 저장 사이의 트랜잭션 간격이 0.02초에 불과하고 본문에 사용된 의학 약어와 상용구가 피고인의 평소 작성 습관과 현저히 다른 점은 외부 데이터베이스 쿼리를 통한 일괄 덮어쓰기 조작 정황을 강하게 뒷받침한다.</p>
+<p class="lv2">③ 복도 폐쇄회로 텔레비전 영상 역시 사고 당일의 기상 상태와 자동 블라인드 하강 작동 기록 및 피해자가 착용하고 있던 황색 인식밴드와 명백히 모순되어 영상의 동일성과 무결성이 훼손되었다.</p>
+<p class="ind">나아가 검사가 제출한 나머지 증거들만으로는 피고인이 20XX. 5. 14. 10:30경 피해자에 대하여 퇴원 결정을 내릴 당시 피해자에게 복강 내 지연성 출혈이나 패혈증 초기 징후가 발현되어 있었다거나 피고인이 임상의사로서 요구되는 업무상 주의의무를 위반하여 피해자를 사망에 이르게 하였다는 점이 합리적 의심의 여지 없이 증명되었다고 보기 어렵다.</p>
+<h2>4. 결론</h2>
+<p class="ind">그렇다면 이 사건 공소사실은 범죄의 증명이 없는 경우에 해당하므로 형사소송법 제325조 후단에 의하여 피고인에게 무죄를 선고하고 형법 제58조 제2항에 의하여 피고인에 대한 무죄판결의 요지를 공시하기로 하여 주문과 같이 판결한다.</p>
+<p class="center jd0">20XX. 11. 22.</p>
+<p class="jd">재 판 장　판 사　정 현 우　(인)</p>
+<p class="jd">판　　　　사　강 민 석　(인)</p>
+<p class="jd">판　　　　사　윤 서 진　(인)</p>
+  </div></div></section>
+</main>
+
+<!-- ============ 하단 툴바 (모바일 전용: 공유 버튼만) ============ -->
+<footer class="bottombar">
+  <button class="circle glass" id="btn-share-bottom" aria-label="공유" onclick="onShare()">
+    <svg viewBox="0 0 24 24"><path d="M8.500 9.500H7A2 2 0 0 0 5 11.500v7.500A2 2 0 0 0 7 21h10a2 2 0 0 0 2-2v-7.500a2 2 0 0 0-2-2h-1.500"/><path d="M12 14.500V3M8.300 6.500L12 2.800l3.700 3.700"/></svg>
+  </button>
+</footer>
+
+<!-- ============ 파일 메뉴 팝업 (제목을 누르면 열림) ============ -->
+<div class="menu" id="menu" hidden>
+  <div class="file">
+    <div class="thumb"></div>
+    <div class="name">서울중앙지방법원_판결문__20XX고합XXXX</div>
+    <div class="sub">PDF 문서 · 473KB</div>
+    <button class="share" aria-label="공유" onclick="onShare()">
+      <svg viewBox="0 0 24 24"><path d="M8.500 9.500H7A2 2 0 0 0 5 11.500v7.500A2 2 0 0 0 7 21h10a2 2 0 0 0 2-2v-7.500a2 2 0 0 0-2-2h-1.500"/><path d="M12 14.500V3M8.300 6.500L12 2.800l3.700 3.700"/></svg>
+    </button>
+  </div>
+
+  <button class="item i1" onclick="onLock()">
+    <svg viewBox="0 0 24 24"><rect x="5" y="10.500" width="14" height="10.500" rx="2.800"/><path d="M8.500 10.500V8a3.500 3.500 0 0 1 7 0v2.500"/></svg>PDF 잠금
+  </button>
+  <hr class="h1">
+  <button class="item i2" onclick="onDuplicate()">
+    <svg viewBox="0 0 24 24"><rect x="3" y="8" width="13" height="13" rx="3"/><path d="M7.500 8V6.500A2.500 2.500 0 0 1 10 4h8.500A2.500 2.500 0 0 1 21 6.500V15a2.500 2.500 0 0 1-2.500 2.500H16.500M9.500 11.500v6M6.500 14.500h6"/></svg>복제
+  </button>
+  <button class="item i3" onclick="onMove()">
+    <svg viewBox="0 0 24 24"><path d="M3 8a2.500 2.500 0 0 1 2.500-2.500h3.600l2 2.300h7.400A2.500 2.500 0 0 1 21 10.300V17.500a2.500 2.500 0 0 1-2.500 2.500h-13A2.500 2.500 0 0 1 3 17.500zM3 10.500h18"/></svg>이동
+  </button>
+  <button class="item i4" onclick="onRename()">
+    <svg viewBox="0 0 24 24"><path d="M5.500 18.500L18.500 5.500" stroke-width="2.200"/></svg>이름 변경
+  </button>
+  <hr class="h2">
+  <button class="item i5" onclick="onPrint()">
+    <svg viewBox="0 0 24 24"><rect x="3" y="8.500" width="18" height="9" rx="2.800"/><path d="M7 8.500V4.500h10v4M7.500 14h9v6h-9z"/></svg>프린트
+  </button>
+</div>
+
+<script>
+/* ========== 파일 메뉴 열기/닫기 (제목 버튼) ========== */
+var menu = document.getElementById('menu');
+var titleBtn = document.getElementById('btn-title');
+function setMenu(open){
+  menu.hidden = !open;
+  document.body.classList.toggle('menu-open', open);
+  titleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) lensAll();
+}
+function toggleMenu(e){ if(e) e.stopPropagation(); setMenu(menu.hidden); }
+document.addEventListener('click', function(e){
+  if(!menu.hidden && !menu.contains(e.target)) setMenu(false);
+});
+document.addEventListener('keydown', function(e){ if(e.key === 'Escape') setMenu(false); });
+
+/* ========== 나머지 버튼 동작 (일단 비워둠) ========== */
+function onList(){}
+function onKeyboardPen(){}
+function onMarkup(){}
+function onSearch(){}
+function onShare(){}
+function onClose(){}
+function onLock(){}
+function onDuplicate(){}
+function onMove(){}
+function onRename(){}
+function onPrint(){}
+
+/* ========== 문서 배율: 화면 폭에 맞춰 페이지를 통째로 확대/축소 ========== */
+(function(){
+  var PAGE_W = 794, MAX_W = 1000;
+  var root = document.documentElement;
+  function fit(){
+    var vw = root.clientWidth;
+    var w = Math.min(vw - (vw > 760 ? 11 : 5), MAX_W);
+    root.style.setProperty('--s', (w / PAGE_W).toFixed(5));
+  }
+  fit();
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', fit);
+})();
+
+/* ========== 현재 페이지 표시 (n/6) ========== */
+(function(){
+  var sheets;
+  var label = document.getElementById('pageind-text');
+  var ind = document.getElementById('pageind');
+  function update(){
+    sheets = Array.prototype.slice.call(document.querySelectorAll('.sheet'));
+    var mid = window.innerHeight * 0.4, cur = 1;
+    sheets.forEach(function(el, i){
+      if (el.getBoundingClientRect().top <= mid) cur = i + 1;
+    });
+    label.textContent = cur + '/' + sheets.length;
+    ind.classList.toggle('active', window.scrollY > 20);
+  }
+  window.updatePageInd = update;
+  window.addEventListener('scroll', update, {passive:true});
+  window.addEventListener('resize', update);
+  update();
+})();
+
+/* ========== 리퀴드 글래스 굴절 (Chrome/Edge 계열에서 동작, 그 외는 블러로 대체) ==========
+   버튼 가장자리에서 뒤쪽 화면이 렌즈처럼 휘어 보이도록
+   SVG feDisplacementMap 을 backdrop-filter 로 적용합니다. */
+var LENS_OK = (window.CSS && CSS.supports && CSS.supports('backdrop-filter', 'url(#a)'));
+var svgNS = 'http://www.w3.org/2000/svg';
+var lensHost = null, lensCount = 0;
+function lensOne(el, strength){
+  if (!LENS_OK) return;
+  var w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
+  if (!w || !h) return;
+  var r = Math.min(w, h) / 2;
+  var br = parseFloat(getComputedStyle(el).borderTopLeftRadius);
+  if (!isNaN(br)) r = Math.min(br, r);
+  var edge = Math.max(2, Math.min(w, h) * 0.12);
+  var map =
+    '<svg xmlns="'+svgNS+'" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">' +
+    '<defs>' +
+    '<linearGradient id="r" x1="100%" y1="0%" x2="0%" y2="0%"><stop offset="0%" stop-color="#0000"/><stop offset="100%" stop-color="red"/></linearGradient>' +
+    '<linearGradient id="b" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#0000"/><stop offset="100%" stop-color="blue"/></linearGradient>' +
+    '</defs>' +
+    '<rect width="'+w+'" height="'+h+'" fill="black"/>' +
+    '<rect width="'+w+'" height="'+h+'" rx="'+r+'" fill="url(#r)"/>' +
+    '<rect width="'+w+'" height="'+h+'" rx="'+r+'" fill="url(#b)" style="mix-blend-mode:difference"/>' +
+    '<rect x="'+edge+'" y="'+edge+'" width="'+(w-edge*2)+'" height="'+(h-edge*2)+'" rx="'+Math.max(0,r-edge)+'" fill="hsl(0 0% 50% / .93)" style="filter:blur('+(edge*0.7)+'px)"/>' +
+    '</svg>';
+  var uri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(map);
+  var id = el.getAttribute('data-lens');
+  if (!id){ id = 'lens' + (++lensCount); el.setAttribute('data-lens', id); }
+  var old = document.getElementById(id);
+  if (old) old.remove();
+  if (!lensHost){
+    lensHost = document.createElementNS(svgNS, 'svg');
+    lensHost.setAttribute('width', '0'); lensHost.setAttribute('height', '0');
+    lensHost.style.cssText = 'position:absolute;pointer-events:none';
+    document.body.appendChild(lensHost);
+  }
+  var f = document.createElementNS(svgNS, 'filter');
+  f.setAttribute('id', id);
+  f.setAttribute('filterUnits', 'userSpaceOnUse');
+  f.setAttribute('primitiveUnits', 'userSpaceOnUse');
+  f.setAttribute('x', '0'); f.setAttribute('y', '0');
+  f.setAttribute('width', w); f.setAttribute('height', h);
+  f.setAttribute('color-interpolation-filters', 'sRGB');
+  f.innerHTML =
+    '<feImage href="'+uri+'" x="0" y="0" width="'+w+'" height="'+h+'" result="map"/>' +
+    '<feDisplacementMap in="SourceGraphic" in2="map" scale="'+(-strength)+'" xChannelSelector="R" yChannelSelector="B"/>';
+  lensHost.appendChild(f);
+  var v = 'url(#'+id+') blur(4px) saturate(1.7)';
+  el.style.webkitBackdropFilter = v;
+  el.style.backdropFilter = v;
+}
+function lensAll(){
+  if (!LENS_OK) return;
+  var sel = document.querySelectorAll('.topbar .glass, .bottombar .glass');
+  Array.prototype.forEach.call(sel, function(el){ lensOne(el, 22); });
+  if (!menu.hidden) lensOne(menu, 28);
+}
+lensAll();
+window.addEventListener('resize', lensAll);
+
+/* ========== 편집 · 자동 쪽 나눔 · 자동 저장 ========== */
+(function(){
+  try{ document.execCommand('defaultParagraphSeparator', false, 'p'); }catch(e){}
+  var viewer = document.getElementById('viewer'), KEY = 'verdict-draft-v2';
+  function docs(){ return Array.prototype.slice.call(viewer.querySelectorAll('.doc')); }
+  function addPage(){
+    var sec = document.createElement('section'); sec.className = 'sheet';
+    sec.innerHTML = '<div class="page"><div class="doc" contenteditable="true" spellcheck="false"></div></div>';
+    viewer.appendChild(sec); return sec.querySelector('.doc');
+  }
+  function over(d){ return d.scrollHeight > d.clientHeight + 1; }
+  function reflow(){
+    var sel = window.getSelection(), r = sel.rangeCount ? sel.getRangeAt(0) : null;
+    var sc = r && r.startContainer, so = r && r.startOffset;
+    var ds = docs();
+    for (var i = 0; i < ds.length; i++){
+      var d = ds[i];
+      while (over(d) && d.children.length > 1){
+        var nx = ds[i+1] || (ds.push(addPage()), ds[i+1]);
+        nx.insertBefore(d.lastElementChild, nx.firstChild);
+      }
+      var n = ds[i+1];
+      while (n && n.firstElementChild){
+        var f = n.firstElementChild; d.appendChild(f);
+        if (over(d)){ n.insertBefore(f, n.firstChild); break; }
+      }
+    }
+    for (var k = ds.length - 1; k > 0; k--){
+      if (!ds[k].firstElementChild && !ds[k].textContent){ ds[k].closest('.sheet').remove(); ds.pop(); } else break;
+    }
+    docs().forEach(function(d, i){ d.parentNode.setAttribute('data-no', i + 1); if (!d.firstChild) d.innerHTML = '<p><br></p>'; });
+    if (sc && document.body.contains(sc)){
+      try{ var nr = document.createRange(); nr.setStart(sc, Math.min(so, sc.nodeType === 3 ? sc.length : sc.childNodes.length)); nr.collapse(true); sel.removeAllRanges(); sel.addRange(nr); }catch(e){}
+    }
+    window.updatePageInd && window.updatePageInd();
+  }
+  var t;
+  function save(){ try{ localStorage.setItem(KEY, docs().map(function(d){return d.innerHTML;}).join('<!--PAGE-->')); }catch(e){} }
+  viewer.addEventListener('input', function(){ reflow(); clearTimeout(t); t = setTimeout(save, 400); });
+  viewer.addEventListener('click', function(e){
+    var pg = e.target.closest && e.target.closest('.page');
+    if (pg && !e.target.closest('.doc')){
+      var d = pg.querySelector('.doc'), l = d.lastElementChild || d;
+      var r = document.createRange(); r.selectNodeContents(l); r.collapse(false);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); d.focus();
+    }
+  });
+  try{
+    var saved = localStorage.getItem(KEY);
+    if (saved){
+      saved = saved.split('<p class="center gothic big spaced">서 울 중 앙 지 방 법 원</p>').join('<p class="hd gothic big" style="width:398px">서 울 중 앙 지 방 법 원</p>')
+        .split('<p class="center gothic spaced">제 2 5 형 사 부</p>').join('<p class="hd gothic" style="width:398px">제 2 5 형 사 부</p>')
+        .split('<p class="center gothic ttl spaced">판　결</p>').join('<p class="hd gothic ttl" style="width:398px">판 결</p>').split('style="width:202px"').join('style="width:398px"').split('<p class="hd gothic ttl" style="width:398px">').join('<p class="hd gothic ttl" style="width:147px">')
+        .split('<p class="hd gothic" style="width:398px">제 2 5 형 사 부</p>').join('')
+        .split('<h2 class="center gothic spaced" style="margin-top:22px">주　문</h2>').join('<h2 class="hd gothic" style="width:90px;margin-top:77px">주 문</h2>')
+        .split('<h2 class="center gothic spaced" style="margin-top:14px">이　유</h2>').join('<h2 class="hd gothic" style="width:90px;margin-top:60px">이 유</h2>')
+        .split('<p class="ind">피고인은 무죄.</p>').join('<p>피고인은 무죄.</p>')
+        .split('<p class="ind">이 판결의 요지를 공시한다.</p>').join('<p>이 판결의 요지를 공시한다.</p>');
+      var parts = saved.split('<!--PAGE-->'), ds = docs();
+      parts.forEach(function(h, i){ var d = ds[i] || addPage(); d.innerHTML = h; });
+    }
+  }catch(e){}
+  reflow();
+})();
+</script>
+</body>
+</html>
